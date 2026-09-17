@@ -8,7 +8,9 @@ export type UnsupportedFileCode =
   | "NO_HEADER"
   | "MISSING_COLUMNS"
   | "DUPLICATE_COLUMN"
-  | "AMBIGUOUS_LAYOUT";
+  | "AMBIGUOUS_LAYOUT"
+  | "NO_DATA_ROWS"
+  | "TOO_MANY_ROWS";
 
 export class UnsupportedFileError extends Error {
   constructor(

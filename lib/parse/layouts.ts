@@ -51,3 +51,7 @@ export const HARBOR: LayoutSpec = {
 export const LAYOUTS: LayoutSpec[] = [NORTHSTAR, HARBOR];
 
 export const HEADER_SEARCH_ROWS = 30;
+
+export const FOOTER_PREFIXES = ["end of offer"];
+
+export const MAX_DATA_ROWS = 50_000;
