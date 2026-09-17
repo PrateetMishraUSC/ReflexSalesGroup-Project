@@ -3,13 +3,11 @@ import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import { lines, offers, sourceRows } from "@/db/schema";
 import { db } from "@/lib/db/client";
 import type { Tx } from "@/lib/db/idempotency";
+import { toLineView } from "@/lib/db/rows";
 import { NotFoundError } from "@/lib/errors";
-import { decimalToUnits, unitsToDecimal } from "@/lib/rules/money";
 import type { LineStatus, OfferTotals } from "@/lib/rules/offer";
 
 export type StatusFilter = LineStatus | "all";
-
-const money4 = (value: string | null) => (value === null ? null : unitsToDecimal(decimalToUnits(value)!));
 
 const included = sql`${lines.status} = 'included'`;
 
@@ -68,28 +66,7 @@ export async function getOfferPage(offerId: string, options: { status: StatusFil
     },
     totals,
     page: { status: options.status, page: options.page, pageSize: options.pageSize, totalLines: total },
-    lines: rows.map((line) => ({
-      id: line.id,
-      sheetRow: line.sheetRow,
-      sourceCol: line.sourceCol,
-      itemCode: line.itemCode,
-      description: line.description,
-      size: line.size,
-      category: line.category,
-      quantity: line.quantity,
-      unitCost: money4(line.unitCost),
-      retailPrice: money4(line.retailPrice),
-      lineValue: line.lineValue,
-      retailValue: line.retailValue,
-      supplierTotal: line.supplierTotal,
-      status: line.status,
-      decision: line.decision,
-      excludeReason: line.excludeReason,
-      issues: line.issues,
-      raw: line.raw,
-      edits: line.edits,
-      updatedAt: line.updatedAt.toISOString(),
-    })),
+    lines: rows.map(toLineView),
   };
 }
 

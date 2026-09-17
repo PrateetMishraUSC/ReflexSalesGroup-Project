@@ -1,6 +1,14 @@
 // Shared API helpers: JSON responses, error-to-status mapping, request validation, test hooks and Server-Timing.
 import { z } from "zod";
-import { IdempotencyKeyReusedError, NotFoundError, SimulatedFailureError } from "@/lib/errors";
+import {
+  DecisionNotAllowedError,
+  IdempotencyKeyReusedError,
+  InvalidEditError,
+  NeedsReviewRemainingError,
+  NotFoundError,
+  SimulatedFailureError,
+  VersionConflictError,
+} from "@/lib/errors";
 import { UnsupportedFileError } from "@/lib/parse/errors";
 
 export type ApiErrorBody = { error: { code: string; message: string; details?: unknown } };
@@ -26,6 +34,14 @@ export function errorResponse(error: unknown): Response {
   if (error instanceof UnsupportedFileError) return Response.json(body(error.code, error.message), { status: 422 });
   if (error instanceof NotFoundError) return Response.json(body("NOT_FOUND", error.message), { status: 404 });
   if (error instanceof IdempotencyKeyReusedError) return Response.json(body("IDEMPOTENCY_KEY_REUSED", error.message), { status: 422 });
+  if (error instanceof VersionConflictError) {
+    return Response.json(body("VERSION_CONFLICT", error.message, { currentVersion: error.currentVersion }), { status: 409 });
+  }
+  if (error instanceof InvalidEditError) return Response.json(body("INVALID_VALUE", error.message, { issues: error.issues }), { status: 422 });
+  if (error instanceof DecisionNotAllowedError) return Response.json(body("DECISION_NOT_ALLOWED", error.message), { status: 422 });
+  if (error instanceof NeedsReviewRemainingError) {
+    return Response.json(body("NEEDS_REVIEW_REMAINING", error.message, { needsReviewLines: error.count }), { status: 422 });
+  }
   if (error instanceof SimulatedFailureError) {
     return Response.json(body("SIMULATED_FAILURE", `The save failed (simulated ${error.point}). Nothing was lost; retry to continue.`), { status: 500 });
   }
@@ -58,9 +74,21 @@ export function requireIdempotencyKey(request: Request): string {
 
 export const offerIdSchema = z.uuid();
 
-export function parseOfferId(id: string): string {
-  if (!offerIdSchema.safeParse(id).success) throw new NotFoundError();
+export function parseOfferId(id: string, what = "Offer"): string {
+  if (!offerIdSchema.safeParse(id).success) throw new NotFoundError(what);
   return id;
+}
+
+export async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw new BadRequestError("INVALID_JSON", "The request body must be valid JSON.");
+  }
+}
+
+export function replayHeaders(replayed: boolean): Record<string, string> {
+  return { "Idempotent-Replayed": String(replayed) };
 }
 
 export function testHooksEnabled(): boolean {
