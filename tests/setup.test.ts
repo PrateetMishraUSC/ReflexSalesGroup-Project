@@ -1,3 +1,4 @@
+// Checks the fixtures exist and tests run against the test database.
 import { existsSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";

@@ -1,8 +1,7 @@
+// Shared Postgres connection pool and Drizzle database client.
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 
-// One connection pool per server process. In development, Next.js hot reload
-// re-imports this file, so the pool is kept on globalThis to avoid leaking connections.
 const globalForDb = globalThis as unknown as { pool?: Pool };
 
 function createPool() {
