@@ -2,7 +2,7 @@
 import * as XLSX from "xlsx";
 import { UnsupportedFileError } from "./errors";
 
-export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 export type Cell = {
   t: string;
@@ -22,7 +22,7 @@ export function readWorkbook(data: Buffer): Sheet[] {
     throw new UnsupportedFileError("EMPTY_FILE", "The file is empty.");
   }
   if (data.length > MAX_FILE_BYTES) {
-    throw new UnsupportedFileError("FILE_TOO_LARGE", "The file is larger than 5 MB. Please upload a smaller line sheet.");
+    throw new UnsupportedFileError("FILE_TOO_LARGE", "The file is larger than 4 MB. Please upload a smaller line sheet.");
   }
 
   const magic = data.subarray(0, 4).toString("hex");
