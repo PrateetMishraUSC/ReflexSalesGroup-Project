@@ -1,27 +1,54 @@
-/* Global styles and Tailwind theme colors. */
+/* Global styles and design tokens: Reflex Sales Group brand palette, fonts and focus styles. */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: #f4f4f4;
+  --color-sheet: #ffffff;
+  --color-ink: #131212;
+  --color-navy: #0f244f;
+  --color-navy-mid: #213e7b;
+  --color-muted: #5e6475;
+  --color-rule: #dddddd;
+  --color-brand: #f15825;
+  --color-accent: #cf461a;
+  --color-accent-deep: #b23b14;
+  --color-accent-soft: #fde7de;
+  --color-sky: #25aae1;
+  --color-sky-soft: #e3f1fa;
+  --color-review: #fff3bf;
+  --color-review-ink: #7a5a00;
+  --color-ok: #e3f4ea;
+  --color-ok-ink: #1f7a4d;
+  --color-error: #fce4e6;
+  --color-error-ink: #a3202f;
+  --color-excluded: #eceef4;
+  --color-excluded-ink: #4a5270;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-inter-tight);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

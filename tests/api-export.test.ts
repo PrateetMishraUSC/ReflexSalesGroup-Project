@@ -11,7 +11,7 @@ import { pool } from "@/lib/db/client";
 import { CSV_HEADER, exportFilename } from "@/lib/offers/export-offer";
 import { decimalToUnits } from "@/lib/rules/money";
 import { resetDb } from "./helpers/db";
-import { fixture } from "./helpers/xlsx";
+import { fixture, makeWorkbook } from "./helpers/xlsx";
 
 const BASE = "http://localhost:3000";
 
@@ -87,12 +87,12 @@ describe("GET /api/offers/:id/export.csv", () => {
 
     expect(parseCsv(text)).toEqual([
       CSV_HEADER,
-      ["000101", "Cotton crew tee", "One size", "Apparel", "120", "4.50", "540.00", "6"],
-      ["A102", "Canvas tote", "One size", "Accessories", "80", "3.25", "260.00", "7"],
-      ["A103", "Sport socks", "One size", "Apparel", "240", "1.80", "432.00", "8"],
-      ["A105", "Insulated bottle", "One size", "Home", "48", "6.50", "312.00", "11"],
-      ["A109", "Woven belt", "One size", "Accessories", "1200", "2.10", "2520.00", "17"],
-      ["A111", "Zip wallet", "One size", "Accessories", "45", "3.20", "144.00", "19"],
+      ["000101", "Cotton crew tee", "One size", "Apparel", "120", "4.50", "540.00", "18.00", "6"],
+      ["A102", "Canvas tote", "One size", "Accessories", "80", "3.25", "260.00", "15.00", "7"],
+      ["A103", "Sport socks", "One size", "Apparel", "240", "1.80", "432.00", "8.00", "8"],
+      ["A105", "Insulated bottle", "One size", "Home", "48", "6.50", "312.00", "24.00", "11"],
+      ["A109", "Woven belt", "One size", "Accessories", "1200", "2.10", "2520.00", "12.00", "17"],
+      ["A111", "Zip wallet", "One size", "Accessories", "45", "3.20", "144.00", "16.00", "19"],
     ]);
   });
 
@@ -112,14 +112,40 @@ describe("GET /api/offers/:id/export.csv", () => {
     expect(response.headers.get("X-Offer-Supplier-Value")).toBe(expected.supplierValue);
   });
 
-  it("gives Harbor one row per size and never includes retail prices", async () => {
+  it("gives Harbor one row per size, with reference retail beside the supplier cost", async () => {
     const offerId = await createOffer("02-harbor-size-grid.xlsx");
     const rows = parseCsv((await download(offerId)).text);
-    expect(rows[0]).not.toContain("Retail USD");
-    expect(rows.filter((r) => r[0] === "B204").map((r) => [r[2], r[4]])).toEqual([
-      ["S", "20"],
-      ["L", "30"],
+    expect(rows[0][7]).toBe("Reference Retail per Piece (USD)");
+    expect(rows.filter((r) => r[0] === "B204").map((r) => [r[2], r[4], r[5], r[7]])).toEqual([
+      ["S", "20", "4.00", "20.00"],
+      ["L", "30", "4.00", "20.00"],
     ]);
+  });
+
+  it("leaves reference retail out of the supplier cost totals", async () => {
+    const offerId = await createOffer("01-northstar-line-sheet.xlsx");
+    const { response, text } = await download(offerId);
+    const rows = parseCsv(text).slice(1);
+    const retailTotalCents = rows.reduce((sum, r) => sum + BigInt(decimalToUnits(r[7])! / 100) * BigInt(r[4]), 0n);
+    expect(String(retailTotalCents)).toBe("2155200");
+    expect(response.headers.get("X-Offer-Supplier-Value")).toBe("4208.00");
+  });
+
+  it("leaves the retail cell empty when the supplier gave none", async () => {
+    const sheet = makeWorkbook({
+      Offer: [
+        ["Item Code", "Description", "Size", "Units Available", "Cost USD", "Retail USD"],
+        ["Z1", "Lamp", "One size", 2, 3, null],
+      ],
+    });
+    const form = new FormData();
+    form.append("file", new File([new Uint8Array(sheet)], "no-retail.xlsx"));
+    const upload = await uploadOffer(new Request(`${BASE}/api/offers`, { method: "POST", body: form, headers: { "Idempotency-Key": randomUUID() } }));
+    const { offerId } = await upload.json();
+
+    const [header, row] = parseCsv((await download(offerId)).text);
+    expect(header).toHaveLength(9);
+    expect(row).toEqual(["Z1", "Lamp", "One size", "", "2", "3.00", "6.00", "", "2"]);
   });
 
   it("reflects corrections and decisions, still matching the screen", async () => {
