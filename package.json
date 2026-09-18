@@ -15,6 +15,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@tanstack/react-table": "^9.2.4",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.5",
     "pg": "^8.23.0",

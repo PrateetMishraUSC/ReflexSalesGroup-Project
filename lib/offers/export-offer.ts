@@ -1,4 +1,4 @@
-// Exports an offer's included lines as CSV, reading lines and totals from one consistent database snapshot.
+// Exports an offer's included lines as CSV, with reference retail beside supplier cost, from one consistent database snapshot.
 import { and, asc, eq } from "drizzle-orm";
 import { lines } from "@/db/schema";
 import { toCsv } from "@/lib/csv";
@@ -15,6 +15,7 @@ export const CSV_HEADER = [
   "Quantity",
   "Supplier Unit Cost (USD)",
   "Line Value (USD)",
+  "Reference Retail per Piece (USD)",
   "Sheet Row",
 ];
 
@@ -52,6 +53,7 @@ export async function exportOffer(offerId: string, now = new Date()): Promise<Of
           quantity: lines.quantity,
           unitCost: lines.unitCost,
           lineValue: lines.lineValue,
+          retailPrice: lines.retailPrice,
           sheetRow: lines.sheetRow,
         })
         .from(lines)
@@ -68,6 +70,7 @@ export async function exportOffer(offerId: string, now = new Date()): Promise<Of
           row.quantity,
           unitsToDecimal(decimalToUnits(row.unitCost!)!),
           row.lineValue,
+          row.retailPrice === null ? null : unitsToDecimal(decimalToUnits(row.retailPrice)!),
           row.sheetRow,
         ]),
         TEXT_COLUMNS,
