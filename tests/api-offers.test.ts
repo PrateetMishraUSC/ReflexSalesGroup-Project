@@ -37,7 +37,7 @@ describe("POST /api/offers", () => {
     expect(response.status).toBe(201);
     expect(response.headers.get("Location")).toBe(`/offers/${body.offerId}`);
     expect(response.headers.get("Idempotent-Replayed")).toBe("false");
-    expect(response.headers.get("Server-Timing")).toMatch(/parseMs;dur=\d+, rulesMs;dur=\d+, dbMs;dur=\d+, total;dur=\d+/);
+    expect(response.headers.get("Server-Timing")).toMatch(/parseMs;dur=\d+, rulesMs;dur=\d+, dbMs;dur=\d+, sourceRowsMs;dur=\d+, linesMs;dur=\d+, total;dur=\d+/);
     expect(body).toMatchObject({ name: "Northstar Supply - September offer", layout: "northstar", totals: { pieces: 1733, supplierValue: "4208.00" } });
   });
 
