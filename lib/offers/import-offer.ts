@@ -29,10 +29,12 @@ export type ImportResponse = {
   earlierUploads: { id: string; name: string; createdAt: string }[];
 };
 
+export type ImportTimings = { parseMs: number; rulesMs: number; dbMs: number; sourceRowsMs: number; linesMs: number };
+
 export type ImportResult = {
   response: ImportResponse;
   replayed: boolean;
-  timings: { parseMs: number; rulesMs: number; dbMs: number };
+  timings: ImportTimings;
 };
 
 async function insertInChunks<T extends LineInsert | SourceRowInsert>(
@@ -53,7 +55,7 @@ export async function importOffer(options: ImportOptions): Promise<ImportResult>
   const fileHash = hashRequest(file);
 
   const stored = await findStoredResponse<ImportResponse>(idempotencyKey, fileHash);
-  if (stored) return { response: stored, replayed: true, timings: { parseMs: 0, rulesMs: 0, dbMs: 0 } };
+  if (stored) return { response: stored, replayed: true, timings: { parseMs: 0, rulesMs: 0, dbMs: 0, sourceRowsMs: 0, linesMs: 0 } };
 
   let start = performance.now();
   const extracted = parseUpload(file);
@@ -64,6 +66,8 @@ export async function importOffer(options: ImportOptions): Promise<ImportResult>
   const rulesMs = elapsed(start);
 
   start = performance.now();
+  let sourceRowsMs = 0;
+  let linesMs = 0;
   const { result, replayed } = await withIdempotency<ImportResponse>(idempotencyKey, fileHash, async (tx: Tx) => {
     const earlier = await tx
       .select({ id: offers.id, name: offers.name, createdAt: offers.createdAt })
@@ -84,16 +88,20 @@ export async function importOffer(options: ImportOptions): Promise<ImportResult>
       })
       .returning({ id: offers.id, name: offers.name, layout: offers.layout });
 
+    let phase = performance.now();
     await insertInChunks(
       extracted.sourceRows.map((row) => toSourceRow(offer.id, row)),
       insertMode,
       (chunk) => tx.insert(sourceRows).values(chunk),
     );
+    sourceRowsMs = elapsed(phase);
+    phase = performance.now();
     await insertInChunks(
       reviewed.lines.map((line, i) => toLineRow(offer.id, line, extracted.lines[i].raw)),
       insertMode,
       (chunk) => tx.insert(lines).values(chunk),
     );
+    linesMs = elapsed(phase);
     await tx.insert(lineEvents).values({
       offerId: offer.id,
       action: "import",
@@ -115,5 +123,5 @@ export async function importOffer(options: ImportOptions): Promise<ImportResult>
 
   if (simulateFailure === "after-commit" && !replayed) throw new SimulatedFailureError("after-commit");
 
-  return { response: result, replayed, timings: { parseMs, rulesMs, dbMs } };
+  return { response: result, replayed, timings: { parseMs, rulesMs, dbMs, sourceRowsMs, linesMs } };
 }
